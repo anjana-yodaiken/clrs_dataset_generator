@@ -268,6 +268,7 @@ def get_nodel_embeddings(sampler, model, batch_size, model_seed):
     feedback = next(feedback_gen)
 
     rng_key, new_rng_key = jax.random.split(rng_key)
+
     predictions, aux = model.predict(rng_key, feedback.features)
     pass
 

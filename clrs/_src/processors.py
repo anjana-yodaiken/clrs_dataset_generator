@@ -16,6 +16,9 @@
 """JAX implementation of baseline processor networks."""
 
 import abc
+import os
+from copy import deepcopy
+from pathlib import Path
 from typing import Any, Callable, List, Optional
 
 import chex
@@ -98,6 +101,7 @@ class RT(Processor):
         self.global_vec_size = vec_size  # global vector size (graph vec)
 
         self.tfm_dropout_rate = 0.0
+        self.sample_number = 0
 
     def __call__(
         self,
@@ -108,6 +112,16 @@ class RT(Processor):
         hidden: _Array,
         **unused_kwargs,
     ) -> _Array:
+
+        node_features = np.array(deepcopy(node_fts))
+        hidden_node_features = np.array(deepcopy(hidden))
+        edge_features = np.array(deepcopy(edge_fts))
+        hidden_edge_features = np.array(deepcopy(unused_kwargs.get("e_hidden")))
+        graph_features = np.array(deepcopy(graph_fts))
+        hidden_graph_features = np.array(deepcopy(unused_kwargs.get("g_hidden")))
+        adjacency_matrix = np.array(deepcopy(adj_mat))
+
+
         N = node_fts.shape[-2]
         node_tensors = jnp.concatenate([node_fts, hidden], axis=-1)
         edge_tensors = jnp.concatenate(
@@ -170,6 +184,7 @@ class RT(Processor):
                     name="{}_layer{}".format(self.name, l),
                 )
             )
+
         for layer in layers:
             node_tensors, edge_tensors = layer(
                 node_tensors, edge_tensors, graph_tensors, adj_mat, hidden
@@ -184,6 +199,34 @@ class RT(Processor):
             out_nodes = node_tensors
             out_edges = edge_tensors
             out_graph = graph_tensors
+
+        out_node_features = np.array(deepcopy(out_nodes))
+        out_edge_features = np.array(deepcopy(out_edges))
+        out_graph_features = np.array(deepcopy(out_graph))
+
+
+        sample = [
+            ("node_features", node_features),
+            ("hidden_node_features", hidden_node_features),
+            ("edge_features", edge_features),
+            ("hidden_edge_features", hidden_edge_features),
+            ("graph_features", graph_features),
+            ("hidden_graph_features", hidden_graph_features),
+            ("adjacency_matrix", adjacency_matrix),
+            ("out_node_features", out_node_features),
+            ("out_edge_features", out_edge_features),
+            ("out_graph_features", out_graph_features)]
+
+
+        save_directory_name = f"dataset/{self.sample_number}"
+
+        if not Path(save_directory_name).is_dir():
+            os.mkdir(save_directory_name)
+
+        for filename, array in sample:
+            np.save(f"dataset/{self.sample_number}/{filename}.npy", array)
+
+        self.sample_number += 1
 
         return out_nodes, out_edges, out_graph if self.graph_vec == "core" else None
 
