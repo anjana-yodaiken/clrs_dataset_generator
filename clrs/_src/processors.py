@@ -16,6 +16,9 @@
 """JAX implementation of baseline processor networks."""
 
 import abc
+import os
+from copy import deepcopy
+from pathlib import Path
 from typing import Any, Callable, List, Optional
 
 import chex
@@ -31,6 +34,7 @@ from clrs._src.base_modules.Basic_GAT_jax import Basic_GAT, Basic_GATv2
 _Array = chex.Array
 _Fn = Callable[..., Any]
 BIG_NUMBER = 1e6
+GLOBAL_SAMPLE_COUNTER = 0
 
 
 class Processor(hk.Module):
@@ -108,6 +112,16 @@ class RT(Processor):
         hidden: _Array,
         **unused_kwargs,
     ) -> _Array:
+        # TODO: make sure no save for init
+        if not (type(adj_mat) == jax._src.interpreters.partial_eval.DynamicJaxprTracer):
+            node_features = np.array(deepcopy(node_fts))
+            hidden_node_features = np.array(deepcopy(hidden))
+            edge_features = np.array(deepcopy(edge_fts))
+            hidden_edge_features = np.array(deepcopy(unused_kwargs.get("e_hidden")))
+            graph_features = np.array(deepcopy(graph_fts))
+            hidden_graph_features = np.array(deepcopy(unused_kwargs.get("g_hidden")))
+            adjacency_matrix = np.array(deepcopy(adj_mat))
+
         N = node_fts.shape[-2]
         node_tensors = jnp.concatenate([node_fts, hidden], axis=-1)
         edge_tensors = jnp.concatenate(
@@ -170,6 +184,7 @@ class RT(Processor):
                     name="{}_layer{}".format(self.name, l),
                 )
             )
+
         for layer in layers:
             node_tensors, edge_tensors = layer(
                 node_tensors, edge_tensors, graph_tensors, adj_mat, hidden
@@ -184,6 +199,34 @@ class RT(Processor):
             out_nodes = node_tensors
             out_edges = edge_tensors
             out_graph = graph_tensors
+
+        if not (type(adj_mat) == jax._src.interpreters.partial_eval.DynamicJaxprTracer):
+            out_node_features = np.array(deepcopy(out_nodes))
+            out_edge_features = np.array(deepcopy(out_edges))
+            out_graph_features = np.array(deepcopy(out_graph))
+
+            sample = [
+                ("node_features", node_features),
+                ("hidden_node_features", hidden_node_features),
+                ("edge_features", edge_features),
+                ("hidden_edge_features", hidden_edge_features),
+                ("graph_features", graph_features),
+                ("hidden_graph_features", hidden_graph_features),
+                ("adjacency_matrix", adjacency_matrix),
+                ("out_node_features", out_node_features),
+                ("out_edge_features", out_edge_features),
+                ("out_graph_features", out_graph_features),
+            ]
+            global GLOBAL_SAMPLE_COUNTER
+
+            save_directory_name = f"dataset/{GLOBAL_SAMPLE_COUNTER}"
+
+            Path(save_directory_name).mkdir(exist_ok=True, parents=True)
+
+            for filename, array in sample:
+                np.save(f"dataset/{GLOBAL_SAMPLE_COUNTER}/{filename}.npy", array)
+
+            GLOBAL_SAMPLE_COUNTER = GLOBAL_SAMPLE_COUNTER + 1
 
         return out_nodes, out_edges, out_graph if self.graph_vec == "core" else None
 

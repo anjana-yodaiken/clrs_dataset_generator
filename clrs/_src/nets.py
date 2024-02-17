@@ -241,6 +241,7 @@ class Net(hk.Module):
       A 4-tuple with (output predictions, hint predictions, diff logits,
       ground-truth diffs) for the selected algorithm.
     """
+
     if algorithm_index == -1:
       algorithm_indices = range(len(features_list))
     else:
@@ -307,6 +308,8 @@ class Net(hk.Module):
           **common_args)
 
       # Then scan through the rest.
+
+
       scan_fn = functools.partial(
           self._msg_passing_step,
           first_step=False,
@@ -664,6 +667,7 @@ class NetChunked(Net):
         of the selected algorithm. If `init_mp_state` is True, we return
         initial mp states for all the algorithms.
     """
+
     if algorithm_index == -1:
       algorithm_indices = range(len(features_list))
     else:
@@ -722,6 +726,8 @@ class NetChunked(Net):
 
     for algorithm_index, features, mp_state in zip(
         algorithm_indices, features_list, mp_state_list):
+
+
       inputs = features.inputs
       hints = features.hints
       is_first = features.is_first

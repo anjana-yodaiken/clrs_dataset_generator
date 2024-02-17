@@ -254,11 +254,12 @@ def main(
     rt_model.init(feedback.features, model_seed + 1)
     rt_model.restore_model(str(MODEL_PATH), only_load_processor=False)
     rng_key = jax.random.PRNGKey(model_seed)
+    test_sampler.reset_proc_samples()
     for sampler, batch_size in zip(
         [train_sampler, val_sampler, test_sampler],
         [batch_size, eval_batch_size, eval_batch_size],
     ):
-        new_rng_key = get_nodel_embeddings(sampler, rt_model, batch_size, rng_key)
+        new_rng_key = get_model_embeddings(sampler, rt_model, batch_size, rng_key)
         rng_key = new_rng_key
 
 
@@ -267,19 +268,18 @@ def _iterate_sampler(sampler, batch_size):
         yield sampler.next(batch_size)
 
 
-def get_nodel_embeddings(sampler, model, batch_size, rng_key):
+def get_model_embeddings(sampler, model, batch_size, rng_key):
     counter = 0
     for _ in range(0, sampler._num_samples, batch_size):
 
-        # feedback_gen = _iterate_sampler(sampler, batch_size)
-        # feedback = next(feedback_gen)
+        feedback_gen = _iterate_sampler(sampler, batch_size)
+        feedback = next(feedback_gen)
 
         rng_key, new_rng_key = jax.random.split(rng_key)
-        # predictions, aux = model.predict(rng_key, feedback.features)
-        # counter = counter + feedback.features.inputs[1].data.shape[0]
-        rng_key = new_rng_key
+        _, _ = model.predict(rng_key, feedback.features)
         counter = counter + batch_size
-        print(counter)
+        rng_key = new_rng_key
+
     return rng_key
 
 
