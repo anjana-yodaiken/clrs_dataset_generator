@@ -85,6 +85,7 @@ class RT(Processor):
         edge_hid_size_2: int,
         graph_vec: str,
         disable_edge_updates: bool,
+        save_emb_sub_dir: str,
         name: str = "rt",
     ):
         super().__init__(name=name)
@@ -100,7 +101,7 @@ class RT(Processor):
         self.edge_hid_size_1 = edge_hid_size_1
         self.edge_hid_size_2 = edge_hid_size_2
         self.global_vec_size = vec_size  # global vector size (graph vec)
-
+        self.save_emb_sub_dir = save_emb_sub_dir
         self.tfm_dropout_rate = 0.0
 
     def __call__(
@@ -219,12 +220,17 @@ class RT(Processor):
             ]
             global GLOBAL_SAMPLE_COUNTER
 
-            save_directory_name = f"dataset/{GLOBAL_SAMPLE_COUNTER}"
+            save_directory_name = (
+                f"dataset/{self.save_emb_sub_dir}/{GLOBAL_SAMPLE_COUNTER}"
+            )
 
             Path(save_directory_name).mkdir(exist_ok=True, parents=True)
 
             for filename, array in sample:
-                np.save(f"dataset/{GLOBAL_SAMPLE_COUNTER}/{filename}.npy", array)
+                np.save(
+                    f"dataset/{self.save_emb_sub_dir}/{GLOBAL_SAMPLE_COUNTER}/{filename}.npy",
+                    array,
+                )
 
             GLOBAL_SAMPLE_COUNTER = GLOBAL_SAMPLE_COUNTER + 1
 
@@ -758,6 +764,7 @@ def get_processor_factory(
                 edge_hid_size_2=kwargs["edge_hid_size_2"],
                 graph_vec=kwargs["graph_vec"],
                 disable_edge_updates=kwargs["disable_edge_updates"],
+                save_emb_sub_dir=kwargs["save_emb_sub_dir"],
                 name=kind,
             )
         elif kind == "gat":

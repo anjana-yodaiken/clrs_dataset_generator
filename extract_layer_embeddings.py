@@ -195,6 +195,89 @@ def main(
     train_sampler, train_spec, val_sampler, test_sampler = get_dataset_samplers(
         algorithm, train_seed, valid_seed, test_seed, train_size, test_size, valid_size
     )
+
+    dataset_specs = {
+        "train": {
+            "sampler": train_sampler,
+            "batch_size": batch_size,
+            "save_emb_sub_dir": "train",
+        },
+        "val": {
+            "sampler": val_sampler,
+            "batch_size": eval_batch_size,
+            "save_emb_sub_dir": "val",
+        },
+        "test": {
+            "sampler": test_sampler,
+            "batch_size": batch_size,
+            "save_emb_sub_dir": "test",
+        },
+    }
+    for name, specs in dataset_specs.items():
+        sampler = specs["sampler"]
+        batch_size = specs["batch_size"]
+        save_emb_sub_dir = specs["save_emb_sub_dir"]
+
+        rng_key = jax.random.PRNGKey(model_seed)
+
+        rt_model = restore_model(
+            processor_type,
+            use_ln,
+            num_layers,
+            nb_heads,
+            node_hid_size,
+            edge_hid_size_1,
+            edge_hid_size_2,
+            graph_vec,
+            disable_edge_updates,
+            save_emb_sub_dir,
+            hint_mode,
+            head_size,
+            ptr_from_edges,
+            use_lstm,
+            learning_rate,
+            checkpoint_path,
+            freeze_processor,
+            dropout_prob,
+            hint_teacher_forcing_noise,
+            train_spec,
+            val_sampler,
+            test_sampler,
+            model_seed,
+            eval_batch_size,
+        )
+
+        new_rng_key = get_model_embeddings(sampler, rt_model, batch_size, rng_key)
+        rng_key = new_rng_key
+
+
+def restore_model(
+    processor_type,
+    use_ln,
+    num_layers,
+    nb_heads,
+    node_hid_size,
+    edge_hid_size_1,
+    edge_hid_size_2,
+    graph_vec,
+    disable_edge_updates,
+    save_emb_sub_dir,
+    hint_mode,
+    head_size,
+    ptr_from_edges,
+    use_lstm,
+    learning_rate,
+    checkpoint_path,
+    freeze_processor,
+    dropout_prob,
+    hint_teacher_forcing_noise,
+    train_spec,
+    val_sampler,
+    test_sampler,
+    model_seed,
+    eval_batch_size,
+    model_path=MODEL_PATH,
+):
     processor_factory = clrs.get_processor_factory(
         processor_type,
         use_ln=use_ln,
@@ -205,6 +288,7 @@ def main(
         edge_hid_size_2=edge_hid_size_2,
         graph_vec=graph_vec,
         disable_edge_updates=disable_edge_updates,
+        save_emb_sub_dir=save_emb_sub_dir,
     )
 
     if hint_mode == "encoded_decoded_nodiff":
@@ -251,16 +335,14 @@ def main(
 
     feedback = test_sampler.next(eval_batch_size, eval=True)
 
-    rt_model.init(feedback.features, model_seed + 1)
+    rt_model.init(
+        feedback.features,
+        model_seed + 1,
+    )
     rt_model.restore_model(str(MODEL_PATH), only_load_processor=False)
-    rng_key = jax.random.PRNGKey(model_seed)
     test_sampler.reset_proc_samples()
-    for sampler, batch_size in zip(
-        [train_sampler, val_sampler, test_sampler],
-        [batch_size, eval_batch_size, eval_batch_size],
-    ):
-        new_rng_key = get_model_embeddings(sampler, rt_model, batch_size, rng_key)
-        rng_key = new_rng_key
+
+    return rt_model
 
 
 def _iterate_sampler(sampler, batch_size):
