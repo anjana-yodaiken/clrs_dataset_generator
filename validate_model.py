@@ -6,7 +6,7 @@ from clrs._src import specs
 import click
 
 CWD = Path.cwd()
-MODEL_PATH = Path(CWD, "trained_models/jarvis_march.pkl")
+MODEL_PATH = Path(CWD, "trained_models/mpnn.pkl")
 
 
 @click.command()
@@ -188,7 +188,8 @@ def main(
     use_ln=True,
     use_lstm=False,
     graph_vec="cat",
-    processor_type="rt",
+    processor_type="basic_mpnn",
+    encoder_decoder_path="trained_models/jarvis_march.pkl",
     checkpoint_path="tmp/CLRS30",
     freeze_processor=False,
 ):
@@ -197,22 +198,13 @@ def main(
     )
 
     dataset_specs = {
-        "train": {
-            "sampler": train_sampler,
-            "batch_size": batch_size,
-            "save_emb_sub_dir": "train",
-        },
-        "val": {
-            "sampler": val_sampler,
-            "batch_size": eval_batch_size,
-            "save_emb_sub_dir": "val",
-        },
         "test": {
             "sampler": test_sampler,
             "batch_size": eval_batch_size,
             "save_emb_sub_dir": "test",
         },
     }
+
     for name, specs in dataset_specs.items():
         sampler = specs["sampler"]
         batch_size = specs["batch_size"]
@@ -245,6 +237,7 @@ def main(
             test_sampler,
             model_seed,
             eval_batch_size,
+            encoder_decoder_path,
         )
 
         new_rng_key = get_model_embeddings(sampler, rt_model, batch_size, rng_key)
@@ -276,6 +269,7 @@ def restore_model(
     test_sampler,
     model_seed,
     eval_batch_size,
+    encoder_decoder_path,
     model_path=MODEL_PATH,
 ):
     processor_factory = clrs.get_processor_factory(
@@ -288,8 +282,8 @@ def restore_model(
         edge_hid_size_2=edge_hid_size_2,
         graph_vec=graph_vec,
         disable_edge_updates=disable_edge_updates,
-        save_emb_sub_dir=save_emb_sub_dir,
-        save_embeddings=True,
+        save_emb_sub_dir=None,
+        save_embeddings=False,
     )
 
     if hint_mode == "encoded_decoded_nodiff":
@@ -340,9 +334,12 @@ def restore_model(
         feedback.features,
         model_seed + 1,
     )
-    rt_model.restore_model(str(MODEL_PATH), only_load_processor=False)
+    rt_model.restore_model(
+        str(MODEL_PATH),
+        only_load_processor=False,
+        encoder_decoder_path=encoder_decoder_path,
+    )
     test_sampler.reset_proc_samples()
-
     return rt_model
 
 

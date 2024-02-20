@@ -350,7 +350,12 @@ class BaselineModel(model.Model):
 
         return losses_
 
-    def restore_model(self, file_name: str, only_load_processor: bool = False):
+    def restore_model(
+        self,
+        file_name: str,
+        only_load_processor: bool = False,
+        encoder_decoder_path=None,
+    ):
         """Restore model from `file_name`."""
         path = os.path.join(self.checkpoint_path, file_name)
         with open(path, "rb") as f:
@@ -359,7 +364,18 @@ class BaselineModel(model.Model):
                 restored_params = _filter_processor(restored_state["params"])
             else:
                 restored_params = restored_state["params"]
+
             self.params = hk.data_structures.merge(self.params, restored_params)
+
+            if encoder_decoder_path is not None:
+                with open(encoder_decoder_path, "rb") as ed_f:
+                    restored_ed_state = pickle.load(ed_f)
+                    restored_ed_params = _filter_encoder_decoder(
+                        restored_ed_state["params"]
+                    )
+                    self.params = hk.data_structures.merge(
+                        self.params, restored_ed_params
+                    )
             self.opt_state = restored_state["opt_state"]
 
     def save_model(self, file_name: str):
@@ -561,6 +577,12 @@ def _nb_nodes(feedback: _Feedback, is_chunked) -> int:
 def _filter_processor(params: hk.Params) -> hk.Params:
     return hk.data_structures.filter(
         lambda module_name, n, v: "construct_processor" in module_name, params
+    )
+
+
+def _filter_encoder_decoder(params: hk.Params) -> hk.Params:
+    return hk.data_structures.filter(
+        lambda module_name, n, v: "encoders_decoders" in module_name, params
     )
 
 

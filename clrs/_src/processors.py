@@ -86,6 +86,7 @@ class RT(Processor):
         graph_vec: str,
         disable_edge_updates: bool,
         save_emb_sub_dir: str,
+        save_embeddings: str = False,
         name: str = "rt",
     ):
         super().__init__(name=name)
@@ -102,6 +103,7 @@ class RT(Processor):
         self.edge_hid_size_2 = edge_hid_size_2
         self.global_vec_size = vec_size  # global vector size (graph vec)
         self.save_emb_sub_dir = save_emb_sub_dir
+        self.save_embeddings = save_embeddings
         self.tfm_dropout_rate = 0.0
 
     def __call__(
@@ -114,7 +116,10 @@ class RT(Processor):
         **unused_kwargs,
     ) -> _Array:
         # TODO: make sure no save for init
-        if not (type(adj_mat) == jax._src.interpreters.partial_eval.DynamicJaxprTracer):
+        if (
+            not (type(adj_mat) == jax._src.interpreters.partial_eval.DynamicJaxprTracer)
+            and self.save_embeddings
+        ):
             node_features = np.array(deepcopy(node_fts))
             hidden_node_features = np.array(deepcopy(hidden))
             edge_features = np.array(deepcopy(edge_fts))
@@ -201,7 +206,10 @@ class RT(Processor):
             out_edges = edge_tensors
             out_graph = graph_tensors
 
-        if not (type(adj_mat) == jax._src.interpreters.partial_eval.DynamicJaxprTracer):
+        if (
+            not (type(adj_mat) == jax._src.interpreters.partial_eval.DynamicJaxprTracer)
+            and self.save_embeddings
+        ):
             out_node_features = np.array(deepcopy(out_nodes))
             out_edge_features = np.array(deepcopy(out_edges))
             out_graph_features = np.array(deepcopy(out_graph))
@@ -765,6 +773,7 @@ def get_processor_factory(
                 graph_vec=kwargs["graph_vec"],
                 disable_edge_updates=kwargs["disable_edge_updates"],
                 save_emb_sub_dir=kwargs["save_emb_sub_dir"],
+                save_embeddings=kwargs["save_embeddings"],
                 name=kind,
             )
         elif kind == "gat":
@@ -827,6 +836,14 @@ def get_processor_factory(
                 out_size=out_size,
                 msgs_mlp_sizes=[out_size, out_size],
                 use_ln=use_ln,
+            )
+        elif kind == "basic_mpnn":
+            processor = Basic_MPNN(
+                nb_layers=3,
+                out_size=192,
+                mid_size=64,
+                activation=jax.nn.relu,
+                reduction=jnp.max,
             )
         else:
             raise ValueError("Unexpected processor kind " + kind)
