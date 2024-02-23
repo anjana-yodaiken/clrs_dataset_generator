@@ -361,9 +361,15 @@ class BaselineModel(model.Model):
         with open(path, "rb") as f:
             restored_state = pickle.load(f)
             if only_load_processor:
-                restored_params = _filter_processor(restored_state["params"])
+                if isinstance(restored_state, dict) and "params" in restored_state:
+                    restored_params = _filter_processor(restored_state["params"])
+                else:
+                    restored_params = restored_state
             else:
-                restored_params = restored_state["params"]
+                if isinstance(restored_state, dict) and "params" in restored_state:
+                    restored_params = restored_state["params"]
+                else:
+                    restored_params = restored_state
 
             self.params = hk.data_structures.merge(self.params, restored_params)
 
@@ -376,7 +382,8 @@ class BaselineModel(model.Model):
                     self.params = hk.data_structures.merge(
                         self.params, restored_ed_params
                     )
-            self.opt_state = restored_state["opt_state"]
+            self.opt_state = None
+            # self.opt_state = restored_state["opt_state"] #################################################
 
     def save_model(self, file_name: str):
         """Save model (processor weights only) to `file_name`."""

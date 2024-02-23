@@ -98,4 +98,12 @@ class Basic_MPNN(hk.Module):
             ln = hk.LayerNorm(axis=-1, create_scale=True, create_offset=True)
             ret = ln(ret)
 
-        return ret
+        return ret, None, None
+
+    @property
+    def inf_bias(self):
+        return False
+
+    @property
+    def inf_bias_edge(self):
+        return False

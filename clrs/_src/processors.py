@@ -190,11 +190,12 @@ class RT(Processor):
                     name="{}_layer{}".format(self.name, l),
                 )
             )
-
+        edge_tensors_dc = deepcopy(edge_tensors)
         for layer in layers:
             node_tensors, edge_tensors = layer(
                 node_tensors, edge_tensors, graph_tensors, adj_mat, hidden
             )
+            jnp.array_equal(edge_tensors_dc, edge_tensors)
             pass
 
         if self.graph_vec == "core":
