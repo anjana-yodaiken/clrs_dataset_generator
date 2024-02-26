@@ -393,9 +393,6 @@ class BaselineModel(model.Model):
             param_length_before_merge = len(self.params)
             self.params = hk.data_structures.merge(self.params, restored_params)
 
-            if param_length_before_merge != self.params:
-                raise Exception("Keys mismatch resulting in extra layers!!!")
-
             if encoder_decoder_path is not None:
                 with open(encoder_decoder_path, "rb") as ed_f:
                     restored_ed_state = pickle.load(ed_f)
@@ -405,6 +402,9 @@ class BaselineModel(model.Model):
                     self.params = hk.data_structures.merge(
                         self.params, restored_ed_params
                     )
+
+            if param_length_before_merge != len(self.params):
+                raise Exception("Keys mismatch resulting in extra layers!!!")
             self.opt_state = None
             # self.opt_state = restored_state["opt_state"] #################################################
 
