@@ -176,6 +176,14 @@ class BaselineModel(model.Model):
         self.net_fn_apply = self.net_fn.apply
         # Removed jax.jit wrapping for loss function as well
         self.jitted_loss = self._loss
+        # self.net_fn_apply = jax.jit(
+        #     self.net_fn.apply,
+        #     static_argnames=["repred", "algorithm_index"],
+        #     device="cpu",
+        # )
+        # self.jitted_loss = jax.jit(
+        #     self._loss, static_argnames=["algorithm_index"], device="cpu"
+        # )
 
     def init(self, features: Union[_Features, List[_Features]], seed: _Seed):
         if not isinstance(features, list):
@@ -352,12 +360,12 @@ class BaselineModel(model.Model):
 
     def restore_model(
         self,
-        file_name: str,
+        file_path: str,
         only_load_processor: bool = False,
         encoder_decoder_path=None,
     ):
         """Restore model from `file_name`."""
-        path = os.path.join(self.checkpoint_path, file_name)
+        path = os.path.join(file_path)
         with open(path, "rb") as f:
             restored_state = pickle.load(f)
             if only_load_processor:

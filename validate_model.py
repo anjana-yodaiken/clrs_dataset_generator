@@ -187,7 +187,7 @@ def main(
     hint_mode="encoded_decoded_nodiff",
     use_ln=True,
     use_lstm=False,
-    graph_vec="cat",
+    graph_vec="att",
     processor_type="basic_mpnn",
     encoder_decoder_path="trained_models/jarvis_march.pkl",
     checkpoint_path="tmp/CLRS30",

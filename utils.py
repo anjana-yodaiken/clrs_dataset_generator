@@ -1,4 +1,3 @@
-from constants import MODEL_PATH
 import clrs
 from clrs._src import specs
 
@@ -34,7 +33,8 @@ def restore_model(
     test_sampler,
     model_seed,
     eval_batch_size,
-    model_path=MODEL_PATH,
+    encoder_decoder_path,
+    model_path,
 ):
     processor_factory = clrs.get_processor_factory(
         processor_type,
@@ -47,7 +47,7 @@ def restore_model(
         graph_vec=graph_vec,
         disable_edge_updates=disable_edge_updates,
         save_emb_sub_dir=save_emb_sub_dir,
-        save_embeddings=True,
+        save_embeddings=save_embeddings,
     )
 
     if hint_mode == "encoded_decoded_nodiff":
@@ -98,7 +98,11 @@ def restore_model(
         feedback.features,
         model_seed + 1,
     )
-    rt_model.restore_model(str(model_path), only_load_processor=False)
+    rt_model.restore_model(
+        str(model_path),
+        only_load_processor=False,
+        encoder_decoder_path=encoder_decoder_path,
+    )
     test_sampler.reset_proc_samples()
 
     return rt_model
