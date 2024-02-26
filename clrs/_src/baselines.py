@@ -373,13 +373,28 @@ class BaselineModel(model.Model):
                     restored_params = _filter_processor(restored_state["params"])
                 else:
                     restored_params = restored_state
+                    restored_params = {
+                        f"net/{k}": v for k, v in restored_params.items()
+                    }
             else:
                 if isinstance(restored_state, dict) and "params" in restored_state:
                     restored_params = restored_state["params"]
+
                 else:
                     restored_params = restored_state
+                    restored_params = {
+                        f"net/{k}": v for k, v in restored_params.items()
+                    }
 
+            for key in restored_params.keys():
+                if key not in self.params.keys():
+                    raise Exception("Keys don't match!!!")
+
+            param_length_before_merge = len(self.params)
             self.params = hk.data_structures.merge(self.params, restored_params)
+
+            if param_length_before_merge != self.params:
+                raise Exception("Keys mismatch resulting in extra layers!!!")
 
             if encoder_decoder_path is not None:
                 with open(encoder_decoder_path, "rb") as ed_f:

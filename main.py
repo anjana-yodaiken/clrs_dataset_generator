@@ -274,12 +274,12 @@ def main_validate_model(
     )
 
     dataset_specs = {
-        "train": {
-            "sampler": train_sampler,
-            "batch_size": batch_size,
-            "n_samples": train_sampler._num_samples,
-            "save_emb_sub_dir": "",  # not saving embeddings
-        },
+        # "train": {
+        #     "sampler": train_sampler,
+        #     "batch_size": batch_size,
+        #     "n_samples": train_sampler._num_samples,
+        #     "save_emb_sub_dir": "",  # not saving embeddings
+        # },
         "val": {
             "sampler": val_sampler,
             "batch_size": eval_batch_size,
@@ -343,7 +343,8 @@ def main_validate_model(
             spec=train_spec,
             extras={},
         )
-
+        print(processor_type)
+        print(f"{name}: ", stats)
         results[name] = stats
 
 

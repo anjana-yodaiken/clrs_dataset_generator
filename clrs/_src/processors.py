@@ -885,7 +885,7 @@ def get_processor_factory(
                 nb_layers=3,
                 out_size=192,
                 mid_size=192,
-                activation=jax.nn.relu,
+                activation=None,
                 reduction=jnp.max,
             )
         else:
