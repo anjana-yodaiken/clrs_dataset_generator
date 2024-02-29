@@ -104,6 +104,7 @@ def restore_model(
         encoder_decoder_path=encoder_decoder_path,
     )
     test_sampler.reset_proc_samples()
+    val_sampler.reset_proc_samples()
 
     return rt_model
 

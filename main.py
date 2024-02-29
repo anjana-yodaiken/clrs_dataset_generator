@@ -44,6 +44,7 @@ from utils import _iterate_sampler, restore_model, get_dataset_samplers, unpack
 @click.option("--checkpoint_path", default="/tmp/CLRS30")
 @click.option("--freeze_processor", default=False)
 @click.option("--function", default="extract")
+@click.option("--model_path", default=None)
 def click_main(
     algorithm,
     train_seed,
@@ -83,6 +84,7 @@ def click_main(
     checkpoint_path,
     freeze_processor,
     function,
+    model_path,
 ):
     if function == "extract":
         main_extract_layer_embeddings(
@@ -164,6 +166,7 @@ def click_main(
             processor_type,
             checkpoint_path,
             freeze_processor,
+            model_path,
         )
 
 
@@ -268,6 +271,7 @@ def main_validate_model(
     checkpoint_path="tmp/CLRS30",
     freeze_processor=False,
     encoder_decoder_path=None,
+    model_path=None,
 ):
     train_sampler, train_spec, val_sampler, test_sampler = get_dataset_samplers(
         algorithm, train_seed, valid_seed, test_seed, train_size, test_size, valid_size
@@ -328,7 +332,7 @@ def main_validate_model(
             model_seed,
             eval_batch_size,
             encoder_decoder_path=encoder_decoder_path,
-            model_path=f"trained_models/{processor_type}_{algorithm}.pkl",
+            model_path=model_path,
             # encoder_decoder_path="trained_models/rt_jarvis_march.pkl",
             # model_path=f"trained_models/{processor_type}_jarvis_march.pkl",
         )
@@ -468,16 +472,18 @@ def get_model_embeddings(sampler, model, batch_size, rng_key):
 if __name__ == "__main__":
 
     # main_extract_layer_embeddings()
-    for processor_type in ["aligned_mpnn", "rt"]:
-        if processor_type == "aligned_mpnn":
-            main_validate_model(
-                algorithm="jarvis_march",
-                processor_type=processor_type,
-                encoder_decoder_path="trained_models/rt_jarvis_march.pkl",
-            )
-        else:
-            main_validate_model(
-                algorithm="jarvis_march",
-                processor_type=processor_type,
-                encoder_decoder_path=None,
-            )
+
+    # testing aligned mpnn
+    main_validate_model(
+        algorithm="jarvis_march",
+        processor_type="aligned_mpnn",
+        encoder_decoder_path="trained_models/rt_jarvis_march.pkl",
+        model_path="trained_models/aligned_mpnn_jarvis_march.pkl",
+    )
+
+    # testing RT model
+    # main_validate_model(
+    #     algorithm="jarvis_march",
+    #     processor_type="rt",
+    #     model_path="trained_models/rt_jarvis_march.pkl",
+    # )
