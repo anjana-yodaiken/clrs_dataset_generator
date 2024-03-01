@@ -29,7 +29,8 @@ from jax import pure_callback
 import numpy as np
 
 from clrs._src.base_modules.Basic_Transformer_jax import Basic_RT
-from clrs._src.base_modules.Basic_MPNN_jax import AlignedMPNN, Basic_MPNN
+from clrs._src.base_modules.Basic_MPNN_jax import Basic_MPNN
+from clrs._src.new_processors import AlignedMPNN, LinearGraphTransformer
 from clrs._src.base_modules.Basic_GAT_jax import Basic_GAT, Basic_GATv2
 
 _Array = chex.Array
@@ -882,11 +883,21 @@ def get_processor_factory(
             )
         elif kind == "aligned_mpnn":
             processor = AlignedMPNN(
-                nb_layers=3,
+                nb_layers=1,
                 out_size=192,
                 mid_size=192,
                 activation=None,
-                reduction=jnp.max,
+                reduction=jnp.sum,
+            )
+        elif kind == "linear_transformer":
+            processor = LinearGraphTransformer(
+                nb_heads=1,
+                mid_size=192,
+                out_size=192,
+                name="linear_gt",
+                num_layers=1,
+                save_emb_sub_dir=kwargs["save_emb_sub_dir"],
+                save_embeddings=kwargs["save_embeddings"],
             )
         else:
             raise ValueError("Unexpected processor kind " + kind)

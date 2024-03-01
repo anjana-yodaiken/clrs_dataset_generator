@@ -172,16 +172,16 @@ class BaselineModel(model.Model):
             )(*args, **kwargs)
 
         self.net_fn = hk.transform(_use_net)
-        # # Removed jax.jit wrapping
-        # self.net_fn_apply = self.net_fn.apply
-        # # Removed jax.jit wrapping for loss function as well
-        # self.jitted_loss = self._loss
+        # Removed jax.jit wrapping
+        self.net_fn_apply = self.net_fn.apply
+        # Removed jax.jit wrapping for loss function as well
+        self.jitted_loss = self._loss
 
-        self.net_fn_apply = jax.jit(
-            self.net_fn.apply,
-            static_argnames=["repred", "algorithm_index"],
-        )
-        self.jitted_loss = jax.jit(self._loss, static_argnames=["algorithm_index"])
+        # self.net_fn_apply = jax.jit(
+        #     self.net_fn.apply,
+        #     static_argnames=["repred", "algorithm_index"],
+        # )
+        # self.jitted_loss = jax.jit(self._loss, static_argnames=["algorithm_index"])
 
     def init(self, features: Union[_Features, List[_Features]], seed: _Seed):
         if not isinstance(features, list):
@@ -604,7 +604,7 @@ def _nb_nodes(feedback: _Feedback, is_chunked) -> int:
 
 def _filter_processor(params: hk.Params) -> hk.Params:
     return hk.data_structures.filter(
-        lambda module_name, n, v: "construct_processor" in module_name, params
+        lambda module_name, n, v: "rt" in module_name, params
     )
 
 

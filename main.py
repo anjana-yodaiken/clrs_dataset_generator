@@ -402,11 +402,11 @@ def main_extract_layer_embeddings(
             "batch_size": batch_size,
             "save_emb_sub_dir": "train",
         },
-        # "val": {
-        #     "sampler": val_sampler,
-        #     "batch_size": eval_batch_size,
-        #     "save_emb_sub_dir": "val",
-        # },
+        "val": {
+            "sampler": val_sampler,
+            "batch_size": eval_batch_size,
+            "save_emb_sub_dir": "val",
+        },
         "test": {
             "sampler": test_sampler,
             "batch_size": eval_batch_size,
@@ -471,19 +471,23 @@ def get_model_embeddings(sampler, model, batch_size, rng_key):
 
 if __name__ == "__main__":
 
-    # main_extract_layer_embeddings()
+    # main_extract_layer_embeddings(
+    #     processor_type="linear_transformer",
+    #     model_path="trained_models/linear_transformer_jarvis_march.pkl",
+    #     train_size=1300,
+    # )
 
     # testing aligned mpnn
     main_validate_model(
         algorithm="jarvis_march",
         processor_type="aligned_mpnn",
-        encoder_decoder_path="trained_models/rt_jarvis_march.pkl",
-        model_path="trained_models/aligned_mpnn_jarvis_march.pkl",
+        encoder_decoder_path="trained_models/linear_transformer_jarvis_march.pkl",
+        model_path="trained_models/mpnn.pkl",
     )
 
-    # testing RT model
+    # # testing RT model
     # main_validate_model(
     #     algorithm="jarvis_march",
-    #     processor_type="rt",
-    #     model_path="trained_models/rt_jarvis_march.pkl",
+    #     processor_type="linear_transformer",
+    #     model_path="trained_models/linear_transformer_jarvis_march.pkl",
     # )

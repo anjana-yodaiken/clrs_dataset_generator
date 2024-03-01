@@ -91,7 +91,7 @@ flags.DEFINE_float(
     "training instead of ground-truth teacher hints. Only "
     "pertinent in encoded_decoded modes.",
 )
-flags.DEFINE_integer("nb_heads", 12, "Number of attention heads.")
+flags.DEFINE_integer("nb_heads", 1, "Number of attention heads.")
 flags.DEFINE_integer(
     "head_size",
     16,
@@ -151,7 +151,7 @@ flags.DEFINE_enum(
 )
 flags.DEFINE_enum(
     "processor_type",
-    "rt",
+    "linear_transformer",
     [
         "deepsets",
         "rt",
@@ -164,6 +164,7 @@ flags.DEFINE_enum(
         "gatv2_full",
         "memnet_full",
         "memnet_masked",
+        "linear_transformer",
     ],
     "The processor type to use.",
 )
@@ -394,20 +395,20 @@ def main(unused_argv):
     processor_factory = clrs.get_processor_factory(
         FLAGS.processor_type,
         use_ln=FLAGS.use_ln,
-        nb_layers=FLAGS.num_layers,
+        # nb_layers=FLAGS.num_layers,
         nb_heads=FLAGS.nb_heads,
-        node_hid_size=FLAGS.node_hid_size,
-        edge_hid_size_1=FLAGS.edge_hid_size_1,
-        edge_hid_size_2=FLAGS.edge_hid_size_2,
-        graph_vec=FLAGS.graph_vec,
-        disable_edge_updates=FLAGS.disable_edge_updates,
+        # node_hid_size=FLAGS.node_hid_size,
+        # edge_hid_size_1=FLAGS.edge_hid_size_1,
+        # edge_hid_size_2=FLAGS.edge_hid_size_2,
+        # graph_vec=FLAGS.graph_vec,
+        # disable_edge_updates=True,
         save_emb_sub_dir="",
         save_embeddings=False,
     )
 
     model_params = dict(
         processor_factory=processor_factory,
-        hidden_dim=FLAGS.hidden_size,
+        hidden_dim=192,  # FLAGS.hidden_size,
         encode_hints=encode_hints,
         decode_hints=decode_hints,
         decode_diffs=decode_diffs,
@@ -527,11 +528,11 @@ def main(unused_argv):
                 "train_loss": cur_loss,
                 "train_loss_stats": train_stats["loss"],
                 "train_score": train_stats["score"],
-                "train_pi": train_stats["pi"],
+                # "train_pi": train_stats["pi"],
                 "examples_seen_train": train_stats["examples_seen"],
                 "examples_seen_val": val_stats["examples_seen"],
                 "val_score": score,
-                "val_pi": val_stats["pi"],
+                # "val_pi": val_stats["pi"],
             }
         )
     save_stats(steps, f"{OUTPUTS_DIR}/steps.pkl")
@@ -558,7 +559,7 @@ def main(unused_argv):
     wandb.log(
         {
             "test_score": test_stats["score"],
-            "test_pi": test_stats["pi"],
+            # "test_pi": test_stats["pi"],
         }
     )
 

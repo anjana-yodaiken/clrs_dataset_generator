@@ -75,7 +75,7 @@ def restore_model(
     hidden_size = nb_heads * head_size
     model_params = dict(
         processor_factory=processor_factory,
-        hidden_dim=hidden_size,
+        hidden_dim=192,
         encode_hints=encode_hints,
         decode_hints=decode_hints,
         decode_diffs=decode_diffs,
