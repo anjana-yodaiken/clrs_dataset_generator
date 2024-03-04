@@ -25,15 +25,17 @@ import chex
 import haiku as hk
 import jax
 import jax.numpy as jnp
+from jax import pure_callback
 import numpy as np
 
 from clrs._src.base_modules.Basic_Transformer_jax import Basic_RT
-from clrs._src.base_modules.Basic_MPNN_jax import Basic_MPNN
+from clrs._src.base_modules.Basic_MPNN_jax import AlignedMPNN, Basic_MPNN
 from clrs._src.base_modules.Basic_GAT_jax import Basic_GAT, Basic_GATv2
 
 _Array = chex.Array
 _Fn = Callable[..., Any]
 BIG_NUMBER = 1e6
+GLOBAL_SAMPLE_COUNTER = 0
 
 
 class Processor(hk.Module):
@@ -73,6 +75,39 @@ class Processor(hk.Module):
         return False
 
 
+save_name = {
+    0: None,
+    1: "input_node_features",
+    2: "input_hidden_node_features",
+    3: "input_edge_features",
+    4: "input_hidden_edge_features",
+    5: "input_graph_features",
+    6: "input_hidden_graph_features",
+    7: "input_adjacency_matrix",
+    8: "out_node_features_0",
+    9: "out_node_features_1",
+    10: "out_node_features_2",
+    11: "out_edge_features",
+    12: "out_graph_features",
+}
+
+
+def save_input(save_features):
+    global GLOBAL_SAMPLE_COUNTER
+    save_directory_name = f"dataset/{save_name[0]}/{GLOBAL_SAMPLE_COUNTER}"
+    Path(save_directory_name).mkdir(exist_ok=True, parents=True)
+
+    for filename_idx, array in save_features:
+
+        np.save(
+            f"{save_directory_name}/{save_name[filename_idx.item()]}.npy",
+            array,
+        )
+    if filename_idx == len(save_name) - 1:
+        GLOBAL_SAMPLE_COUNTER = GLOBAL_SAMPLE_COUNTER + 1
+    return np.array(0, dtype=np.int32)  # dummy variable
+
+
 class RT(Processor):
     def __init__(
         self,
@@ -84,6 +119,8 @@ class RT(Processor):
         edge_hid_size_2: int,
         graph_vec: str,
         disable_edge_updates: bool,
+        save_emb_sub_dir: str,
+        save_embeddings: str = False,
         name: str = "rt",
     ):
         super().__init__(name=name)
@@ -100,8 +137,11 @@ class RT(Processor):
         self.edge_hid_size_2 = edge_hid_size_2
         self.global_vec_size = vec_size  # global vector size (graph vec)
 
+        self.save_emb_sub_dir = save_emb_sub_dir
+        global save_name
+        save_name[0] = self.save_emb_sub_dir
+        self.save_embeddings = save_embeddings
         self.tfm_dropout_rate = 0.0
-        self.sample_number = 0
 
     def __call__(
         self,
@@ -112,15 +152,23 @@ class RT(Processor):
         hidden: _Array,
         **unused_kwargs,
     ) -> _Array:
-
-        node_features = np.array(deepcopy(node_fts))
-        hidden_node_features = np.array(deepcopy(hidden))
-        edge_features = np.array(deepcopy(edge_fts))
-        hidden_edge_features = np.array(deepcopy(unused_kwargs.get("e_hidden")))
-        graph_features = np.array(deepcopy(graph_fts))
-        hidden_graph_features = np.array(deepcopy(unused_kwargs.get("g_hidden")))
-        adjacency_matrix = np.array(deepcopy(adj_mat))
-
+        # TODO: make sure no save for init
+        if (
+            not (type(adj_mat) == jax._src.interpreters.partial_eval.DynamicJaxprTracer)
+            and self.save_embeddings
+        ):
+            result = pure_callback(
+                save_input,
+                jax.ShapeDtypeStruct(shape=(), dtype=np.int32),
+                [
+                    (1, np.array(deepcopy(node_fts))),
+                    (2, np.array(deepcopy(hidden))),
+                    (3, np.array(deepcopy(edge_fts))),
+                    (4, np.array(deepcopy(unused_kwargs.get("e_hidden")))),
+                    (5, np.array(deepcopy(graph_fts))),
+                    (7, np.array(deepcopy(adj_mat))),
+                ],
+            )
 
         N = node_fts.shape[-2]
         node_tensors = jnp.concatenate([node_fts, hidden], axis=-1)
@@ -184,11 +232,26 @@ class RT(Processor):
                     name="{}_layer{}".format(self.name, l),
                 )
             )
-
-        for layer in layers:
+        edge_tensors_dc = deepcopy(edge_tensors)
+        for i, layer in enumerate(layers):
             node_tensors, edge_tensors = layer(
                 node_tensors, edge_tensors, graph_tensors, adj_mat, hidden
             )
+            if (
+                not (
+                    type(adj_mat)
+                    == jax._src.interpreters.partial_eval.DynamicJaxprTracer
+                )
+                and self.save_embeddings
+            ):
+                result = pure_callback(
+                    save_input,
+                    jax.ShapeDtypeStruct(shape=(), dtype=np.int32),
+                    [
+                        (i + 8, np.array(deepcopy(node_tensors))),
+                    ],
+                )
+            jnp.array_equal(edge_tensors_dc, edge_tensors)
             pass
 
         if self.graph_vec == "core":
@@ -200,33 +263,19 @@ class RT(Processor):
             out_edges = edge_tensors
             out_graph = graph_tensors
 
-        out_node_features = np.array(deepcopy(out_nodes))
-        out_edge_features = np.array(deepcopy(out_edges))
-        out_graph_features = np.array(deepcopy(out_graph))
+        if (
+            not (type(adj_mat) == jax._src.interpreters.partial_eval.DynamicJaxprTracer)
+            and self.save_embeddings
+        ):
 
-
-        sample = [
-            ("node_features", node_features),
-            ("hidden_node_features", hidden_node_features),
-            ("edge_features", edge_features),
-            ("hidden_edge_features", hidden_edge_features),
-            ("graph_features", graph_features),
-            ("hidden_graph_features", hidden_graph_features),
-            ("adjacency_matrix", adjacency_matrix),
-            ("out_node_features", out_node_features),
-            ("out_edge_features", out_edge_features),
-            ("out_graph_features", out_graph_features)]
-
-
-        save_directory_name = f"dataset/{self.sample_number}"
-
-        if not Path(save_directory_name).is_dir():
-            os.mkdir(save_directory_name)
-
-        for filename, array in sample:
-            np.save(f"dataset/{self.sample_number}/{filename}.npy", array)
-
-        self.sample_number += 1
+            result = pure_callback(
+                save_input,
+                jax.ShapeDtypeStruct(shape=(), dtype=np.int32),
+                [
+                    (11, np.array(deepcopy(out_edges))),
+                    (12, np.array(deepcopy(out_graph))),
+                ],
+            )
 
         return out_nodes, out_edges, out_graph if self.graph_vec == "core" else None
 
@@ -758,6 +807,8 @@ def get_processor_factory(
                 edge_hid_size_2=kwargs["edge_hid_size_2"],
                 graph_vec=kwargs["graph_vec"],
                 disable_edge_updates=kwargs["disable_edge_updates"],
+                save_emb_sub_dir=kwargs["save_emb_sub_dir"],
+                save_embeddings=kwargs["save_embeddings"],
                 name=kind,
             )
         elif kind == "gat":
@@ -820,6 +871,22 @@ def get_processor_factory(
                 out_size=out_size,
                 msgs_mlp_sizes=[out_size, out_size],
                 use_ln=use_ln,
+            )
+        elif kind == "basic_mpnn":
+            processor = Basic_MPNN(
+                nb_layers=3,
+                out_size=192,
+                mid_size=64,
+                activation=jax.nn.relu,
+                reduction=jnp.max,
+            )
+        elif kind == "aligned_mpnn":
+            processor = AlignedMPNN(
+                nb_layers=3,
+                out_size=192,
+                mid_size=192,
+                activation=None,
+                reduction=jnp.max,
             )
         else:
             raise ValueError("Unexpected processor kind " + kind)

@@ -19,3 +19,7 @@ venv/
 .vscode
 
 **__pycache__**
+
+trained_models
+
+**wandb**

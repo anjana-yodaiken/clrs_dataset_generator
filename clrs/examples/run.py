@@ -12,7 +12,22 @@ import jax
 import jax.numpy as jnp
 import requests
 import tensorflow as tf
+import wandb
 
+from pathlib import Path
+
+CWD = Path.cwd()
+OUTPUTS_DIR = Path(CWD, "outputs")
+OUTPUTS_DIR.mkdir(exist_ok=True, parents=True)
+
+wandb.login(key="")
+
+wandb.init(
+    project="train_transformer",
+    entity="monoids",
+    name="experiment_0",
+    group="bellman_ford",
+)
 
 flags.DEFINE_string("algorithm", "jarvis_march", "Which algorithm to run.")
 flags.DEFINE_integer("train_seed", 1, "Seed train set generation.")
@@ -59,7 +74,7 @@ flags.DEFINE_string(
 flags.DEFINE_string(
     "ptr_from_edges", "True", "Whether to decode pointers directly from edge vectors."
 )
-flags.DEFINE_string("disable_edge_updates", "False", "Whether to disable edge updates")
+flags.DEFINE_string("disable_edge_updates", "True", "Whether to disable edge updates")
 
 flags.DEFINE_integer("num_layers", 3, "Number of processor layers.")
 flags.DEFINE_integer(
@@ -130,7 +145,7 @@ flags.DEFINE_string(
 )
 flags.DEFINE_enum(
     "graph_vec",
-    "cat",
+    "att",
     ["att", "core", "cat"],
     "How to process the graph representations.",
 )
@@ -154,7 +169,7 @@ flags.DEFINE_enum(
 )
 
 flags.DEFINE_string(
-    "checkpoint_path", "/tmp/CLRS30", "Path in which checkpoints are saved."
+    "checkpoint_path", str(OUTPUTS_DIR), "Path in which checkpoints are saved."
 )
 # flags.DEFINE_string('dataset_path', '/tmp/CLRS30',
 #                     'Path in which dataset is stored.')
@@ -261,9 +276,8 @@ def maybe_download_dataset():
     return dataset_folder
 
 
-def save_stats(obj, filename):
-    path = os.path.join(FLAGS.checkpoint_path, filename)
-    with open(path, "wb") as outp:
+def save_stats(obj, path):
+    with open(str(path), "wb") as outp:
         pickle.dump(obj, outp, pickle.HIGHEST_PROTOCOL)
 
 
@@ -328,20 +342,6 @@ def main(unused_argv):
             length=16,
         )
 
-        # val_sampler, val_samples, _ = clrs.create_dataset(
-        #    **common_args, split='val')
-        # val_sampler = val_sampler.as_numpy_iterator()
-        # test_sampler, test_samples, _ = clrs.create_dataset(
-        #    **common_args, split='test')
-        # test_sampler = test_sampler.as_numpy_iterator()
-
-        # val_samples = 32
-        # val_sampler, _ = clrs.build_sampler(
-        #     name=FLAGS.algorithm,
-        #     seed=FLAGS.seed + 1,
-        #     num_samples=32,
-        #     length=16)
-
         val_samples = (
             FLAGS.valid_size
             * specs.CLRS_30_ALGS_SETTINGS[FLAGS.algorithm]["num_samples_multiplier"]
@@ -373,13 +373,6 @@ def main(unused_argv):
             length=16,
         )
 
-        # test_samples = 32
-        # test_sampler, _ = clrs.build_sampler(
-        #     name=FLAGS.algorithm,
-        #     seed=FLAGS.seed + 2,
-        #     num_samples=32,
-        #     length=64)
-
         test_sampler, _ = clrs.build_sampler(
             name=FLAGS.algorithm,
             seed=FLAGS.test_seed,
@@ -408,6 +401,8 @@ def main(unused_argv):
         edge_hid_size_2=FLAGS.edge_hid_size_2,
         graph_vec=FLAGS.graph_vec,
         disable_edge_updates=FLAGS.disable_edge_updates,
+        save_emb_sub_dir="",
+        save_embeddings=False,
     )
 
     model_params = dict(
@@ -467,6 +462,7 @@ def main(unused_argv):
         rng_key, new_rng_key = jax.random.split(rng_key)
         cur_loss = train_model.feedback(rng_key, feedback)
         rng_key = new_rng_key
+
         if current_train_items == 0:
             logging.info("Compiled feedback step in %f s.", time.time() - t)
         if FLAGS.chunked_training:
@@ -522,19 +518,30 @@ def main(unused_argv):
             if score > best_score:
                 logging.info("Saving new checkpoint...")
                 best_score = score
-                train_model.save_model("best.pkl")
+                train_model.save_model(f"{OUTPUTS_DIR}/best.pkl")
             next_eval += FLAGS.eval_every
 
         step += 1
-
-    save_stats(steps, "steps.pkl")
-    save_stats(train_scores, "train_stats.pkl")
-    save_stats(val_scores, "val_stats.pkl")
+        wandb.log(
+            {
+                "train_loss": cur_loss,
+                "train_loss_stats": train_stats["loss"],
+                "train_score": train_stats["score"],
+                "train_pi": train_stats["pi"],
+                "examples_seen_train": train_stats["examples_seen"],
+                "examples_seen_val": val_stats["examples_seen"],
+                "val_score": score,
+                "val_pi": val_stats["pi"],
+            }
+        )
+    save_stats(steps, f"{OUTPUTS_DIR}/steps.pkl")
+    save_stats(train_scores, f"{OUTPUTS_DIR}/train_stats.pkl")
+    save_stats(val_scores, f"{OUTPUTS_DIR}/val_stats.pkl")
 
     # Training complete, evaluate on test set.
     if FLAGS.eval_on_test_set:
         logging.info("Restoring best model from checkpoint...")
-        eval_model.restore_model("best.pkl", only_load_processor=False)
+        eval_model.restore_model(f"{OUTPUTS_DIR}/best.pkl", only_load_processor=False)
 
         rng_key, new_rng_key = jax.random.split(rng_key)
         test_stats = collect_and_eval(
@@ -548,6 +555,12 @@ def main(unused_argv):
         rng_key = new_rng_key
         logging.info("(test) step %d: %s", step, test_stats)
         save_stats(test_stats["score"], "test_stats.pkl")
+    wandb.log(
+        {
+            "test_score": test_stats["score"],
+            "test_pi": test_stats["pi"],
+        }
+    )
 
 
 if __name__ == "__main__":
