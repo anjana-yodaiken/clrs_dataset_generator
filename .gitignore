@@ -21,3 +21,5 @@ venv/
 **__pycache__**
 
 trained_models
+
+**wandb**

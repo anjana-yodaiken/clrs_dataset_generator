@@ -230,11 +230,12 @@ class AlignedMPNN(hk.Module):
         graph_fts: _Array,
         adj_mat: _Array,
         hidden: _Array,
+        e_hidden: _Array,
         num_layers: int = 3,
         **kwargs,
     ) -> tuple[list[_Array], _Array]:
-        node_tensors = node_fts
-        edge_tensors = edge_fts
+        node_tensors = jnp.concatenate([node_fts, hidden], axis=-1)
+        edge_tensors = jnp.concatenate([edge_fts, e_hidden], axis=-1)
         graph_tensors = graph_fts
 
         # VIRTUAL NODE

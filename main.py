@@ -278,12 +278,12 @@ def main_validate_model(
     )
 
     dataset_specs = {
-        # "train": {
-        #     "sampler": train_sampler,
-        #     "batch_size": batch_size,
-        #     "n_samples": train_sampler._num_samples,
-        #     "save_emb_sub_dir": "",  # not saving embeddings
-        # },
+        "train": {
+            "sampler": train_sampler,
+            "batch_size": batch_size,
+            "n_samples": train_sampler._num_samples,
+            "save_emb_sub_dir": "",  # not saving embeddings
+        },
         "val": {
             "sampler": val_sampler,
             "batch_size": eval_batch_size,
@@ -333,8 +333,6 @@ def main_validate_model(
             eval_batch_size,
             encoder_decoder_path=encoder_decoder_path,
             model_path=model_path,
-            # encoder_decoder_path="trained_models/rt_jarvis_march.pkl",
-            # model_path=f"trained_models/{processor_type}_jarvis_march.pkl",
         )
 
         stats = collect_and_eval(
@@ -402,11 +400,11 @@ def main_extract_layer_embeddings(
             "batch_size": batch_size,
             "save_emb_sub_dir": "train",
         },
-        # "val": {
-        #     "sampler": val_sampler,
-        #     "batch_size": eval_batch_size,
-        #     "save_emb_sub_dir": "val",
-        # },
+        "val": {
+            "sampler": val_sampler,
+            "batch_size": eval_batch_size,
+            "save_emb_sub_dir": "val",
+        },
         "test": {
             "sampler": test_sampler,
             "batch_size": eval_batch_size,
@@ -470,20 +468,4 @@ def get_model_embeddings(sampler, model, batch_size, rng_key):
 
 
 if __name__ == "__main__":
-
-    # main_extract_layer_embeddings()
-
-    # testing aligned mpnn
-    main_validate_model(
-        algorithm="jarvis_march",
-        processor_type="aligned_mpnn",
-        encoder_decoder_path="trained_models/rt_jarvis_march.pkl",
-        model_path="trained_models/aligned_mpnn_jarvis_march.pkl",
-    )
-
-    # testing RT model
-    # main_validate_model(
-    #     algorithm="jarvis_march",
-    #     processor_type="rt",
-    #     model_path="trained_models/rt_jarvis_march.pkl",
-    # )
+    main_extract_layer_embeddings()
