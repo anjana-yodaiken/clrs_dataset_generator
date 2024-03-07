@@ -87,8 +87,10 @@ save_name = {
     8: "out_node_features_0",
     9: "out_node_features_1",
     10: "out_node_features_2",
-    11: "out_edge_features",
-    12: "out_graph_features",
+    11: "out_edge_features_0",
+    12: "out_edge_features_1",
+    13: "out_edge_features_2",
+    14: "out_graph_features",
 }
 
 
@@ -249,6 +251,7 @@ class RT(Processor):
                     jax.ShapeDtypeStruct(shape=(), dtype=np.int32),
                     [
                         (i + 8, np.array(deepcopy(node_tensors))),
+                        (i + 11, np.array(deepcopy(edge_tensors))),
                     ],
                 )
             jnp.array_equal(edge_tensors_dc, edge_tensors)
@@ -272,8 +275,7 @@ class RT(Processor):
                 save_input,
                 jax.ShapeDtypeStruct(shape=(), dtype=np.int32),
                 [
-                    (11, np.array(deepcopy(out_edges))),
-                    (12, np.array(deepcopy(out_graph))),
+                    (14, np.array(deepcopy(out_graph))),
                 ],
             )
 

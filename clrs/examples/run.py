@@ -527,11 +527,11 @@ def main(unused_argv):
                 "train_loss": cur_loss,
                 "train_loss_stats": train_stats["loss"],
                 "train_score": train_stats["score"],
-                "train_pi": train_stats["pi"],
+                "train_in_hull": train_stats["in_hull"],
                 "examples_seen_train": train_stats["examples_seen"],
                 "examples_seen_val": val_stats["examples_seen"],
                 "val_score": score,
-                "val_pi": val_stats["pi"],
+                "val_in_hull": val_stats["in_hull"],
             }
         )
     save_stats(steps, f"{OUTPUTS_DIR}/steps.pkl")
@@ -558,7 +558,7 @@ def main(unused_argv):
     wandb.log(
         {
             "test_score": test_stats["score"],
-            "test_pi": test_stats["pi"],
+            "test_in_hull": test_stats["in_hull"],
         }
     )
 
