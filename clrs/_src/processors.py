@@ -87,8 +87,12 @@ save_name = {
     8: "out_node_features_0",
     9: "out_node_features_1",
     10: "out_node_features_2",
-    11: "out_edge_features",
-    12: "out_graph_features",
+    11: "out_node_features_3",
+    12: "out_edge_features_0",
+    13: "out_edge_features_1",
+    14: "out_edge_features_2",
+    15: "out_edge_features_3",
+    16: "out_graph_features",
 }
 
 
@@ -203,6 +207,21 @@ class RT(Processor):
 
         node_tensors = node_enc(node_tensors)
         edge_tensors = edge_enc(edge_tensors)
+        if (
+                not (
+                    type(adj_mat)
+                    == jax._src.interpreters.partial_eval.DynamicJaxprTracer
+                )
+                and self.save_embeddings
+            ):
+            result = pure_callback(
+                save_input,
+                jax.ShapeDtypeStruct(shape=(), dtype=np.int32),
+                [
+                    (8, np.array(deepcopy(node_tensors))),
+                    (12, np.array(deepcopy(edge_tensors))),
+                ],
+            )
         if self.graph_vec == "core":
             graph_tensors = global_enc(graph_tensors)
             expanded_graph_tensors = jnp.expand_dims(graph_tensors, 1)
@@ -232,7 +251,6 @@ class RT(Processor):
                     name="{}_layer{}".format(self.name, l),
                 )
             )
-        edge_tensors_dc = deepcopy(edge_tensors)
         for i, layer in enumerate(layers):
             node_tensors, edge_tensors = layer(
                 node_tensors, edge_tensors, graph_tensors, adj_mat, hidden
@@ -248,7 +266,8 @@ class RT(Processor):
                     save_input,
                     jax.ShapeDtypeStruct(shape=(), dtype=np.int32),
                     [
-                        (i + 8, np.array(deepcopy(node_tensors))),
+                        (i + 9, np.array(deepcopy(node_tensors))),
+                        (i + 13, np.array(deepcopy(edge_tensors))),
                     ],
                 )
             jnp.array_equal(edge_tensors_dc, edge_tensors)
@@ -272,8 +291,7 @@ class RT(Processor):
                 save_input,
                 jax.ShapeDtypeStruct(shape=(), dtype=np.int32),
                 [
-                    (11, np.array(deepcopy(out_edges))),
-                    (12, np.array(deepcopy(out_graph))),
+                    (16, np.array(deepcopy(out_graph))),
                 ],
             )
 
