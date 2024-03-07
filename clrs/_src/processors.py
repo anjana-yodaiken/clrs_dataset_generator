@@ -207,15 +207,21 @@ class RT(Processor):
 
         node_tensors = node_enc(node_tensors)
         edge_tensors = edge_enc(edge_tensors)
-
-        result = pure_callback(
-            save_input,
-            jax.ShapeDtypeStruct(shape=(), dtype=np.int32),
-            [
-                (8, np.array(deepcopy(node_tensors))),
-                (12, np.array(deepcopy(edge_tensors))),
-            ],
-        )
+        if (
+                not (
+                    type(adj_mat)
+                    == jax._src.interpreters.partial_eval.DynamicJaxprTracer
+                )
+                and self.save_embeddings
+            ):
+            result = pure_callback(
+                save_input,
+                jax.ShapeDtypeStruct(shape=(), dtype=np.int32),
+                [
+                    (8, np.array(deepcopy(node_tensors))),
+                    (12, np.array(deepcopy(edge_tensors))),
+                ],
+            )
         if self.graph_vec == "core":
             graph_tensors = global_enc(graph_tensors)
             expanded_graph_tensors = jnp.expand_dims(graph_tensors, 1)
@@ -245,7 +251,6 @@ class RT(Processor):
                     name="{}_layer{}".format(self.name, l),
                 )
             )
-        edge_tensors_dc = deepcopy(edge_tensors)
         for i, layer in enumerate(layers):
             node_tensors, edge_tensors = layer(
                 node_tensors, edge_tensors, graph_tensors, adj_mat, hidden
