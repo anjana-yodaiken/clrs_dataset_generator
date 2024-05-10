@@ -63,6 +63,6 @@ if __name__ == "__main__":
             apply_attention=apply_attention,
             number_of_attention_heads=number_of_attention_heads,
             processor_type="aligned_mpnn",
-            batch_size=64,
-            eval_batch_size=6,
+            batch_size=128,
+            eval_batch_size=1,
         )
