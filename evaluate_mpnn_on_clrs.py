@@ -25,10 +25,19 @@ if __name__ == "__main__":
         number_of_attention_heads_,
     )
 
-
-    with open('results.csv', 'w', newline='') as csvfile:
-        field_names = ["add_virtual_node", "layer_norm", "mid_dim", "reduction", "disable_edge_updates",
-                       "apply_attention", "number_of_attention_heads", "train", "val", "test"]
+    with open("results.csv", "w", newline="") as csvfile:
+        field_names = [
+            "add_virtual_node",
+            "layer_norm",
+            "mid_dim",
+            "reduction",
+            "disable_edge_updates",
+            "apply_attention",
+            "number_of_attention_heads",
+            "train",
+            "val",
+            "test",
+        ]
         writer = csv.DictWriter(csvfile, fieldnames=field_names)
         writer.writeheader()
 
@@ -41,7 +50,15 @@ if __name__ == "__main__":
         apply_attention = mpnn_variant[5]
         number_of_attention_heads = mpnn_variant[6]
 
-        row = {"add_virtual_node": add_virtual_node, "layer_norm": layer_norm, "mid_dim": mid_dim, "reduction": reduction, "disable_edge_updates": disable_edge_updates, "apply_attention": apply_attention, "number_of_attention_heads": number_of_attention_heads}
+        row = {
+            "add_virtual_node": add_virtual_node,
+            "layer_norm": layer_norm,
+            "mid_dim": mid_dim,
+            "reduction": reduction,
+            "disable_edge_updates": disable_edge_updates,
+            "apply_attention": apply_attention,
+            "number_of_attention_heads": number_of_attention_heads,
+        }
 
         if reduction == "max":
             reduction_fn = jnp.max
@@ -63,6 +80,14 @@ if __name__ == "__main__":
                 f"vn-{add_virtual_node}-ln-{layer_norm}-mid_dim-{mid_dim}-reduction-{reduction}-disable_edge_updates-{disable_edge_updates}-apply_attention-{apply_attention}.pkl",
             )
 
+        if not model_path.exists():
+            row["train"] = "None"
+            row["val"] = "None"
+            row["test"] = "None"
+            with open("results.csv", "w", newline="") as csvfile:
+                writer.writerow(row)
+            continue
+
         results = main_validate_model(
             model_path=model_path,
             encoder_decoder_path=MODEL_PATH,
@@ -82,5 +107,5 @@ if __name__ == "__main__":
         row["val"] = results["val"]
         row["test"] = results["test"]
 
-        with open('results.csv', 'w', newline='') as csvfile:
+        with open("results.csv", "w", newline="") as csvfile:
             writer.writerow(row)
