@@ -1,3 +1,4 @@
+import csv
 import itertools
 from constants import MODEL_PATH, MPNN_MODELS_ROOT_DIR
 
@@ -24,6 +25,13 @@ if __name__ == "__main__":
         number_of_attention_heads_,
     )
 
+
+    with open('results.csv', 'w', newline='') as csvfile:
+        field_names = ["add_virtual_node", "layer_norm", "mid_dim", "reduction", "disable_edge_updates",
+                       "apply_attention", "number_of_attention_heads", "train", "val", "test"]
+        writer = csv.DictWriter(csvfile, fieldnames=field_names)
+        writer.writeheader()
+
     for mpnn_variant in mpnn_variants:
         add_virtual_node = mpnn_variant[0]
         layer_norm = mpnn_variant[1]
@@ -32,6 +40,8 @@ if __name__ == "__main__":
         disable_edge_updates = mpnn_variant[4]
         apply_attention = mpnn_variant[5]
         number_of_attention_heads = mpnn_variant[6]
+
+        row = {"add_virtual_node": add_virtual_node, "layer_norm": layer_norm, "mid_dim": mid_dim, "reduction": reduction, "disable_edge_updates": disable_edge_updates, "apply_attention": apply_attention, "number_of_attention_heads": number_of_attention_heads}
 
         if reduction == "max":
             reduction_fn = jnp.max
@@ -52,7 +62,8 @@ if __name__ == "__main__":
                 MPNN_MODELS_ROOT_DIR,
                 f"vn-{add_virtual_node}-ln-{layer_norm}-mid_dim-{mid_dim}-reduction-{reduction}-disable_edge_updates-{disable_edge_updates}-apply_attention-{apply_attention}.pkl",
             )
-        main_validate_model(
+
+        results = main_validate_model(
             model_path=model_path,
             encoder_decoder_path=MODEL_PATH,
             add_virtual_node=add_virtual_node,
@@ -66,3 +77,10 @@ if __name__ == "__main__":
             batch_size=128,
             eval_batch_size=1,
         )
+
+        row["train"] = results["train"]
+        row["val"] = results["val"]
+        row["test"] = results["test"]
+
+        with open('results.csv', 'w', newline='') as csvfile:
+            writer.writerow(row)

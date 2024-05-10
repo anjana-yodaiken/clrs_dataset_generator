@@ -395,6 +395,8 @@ def main_validate_model(
         print(f"{name}: ", stats)
         results[name] = stats
 
+    return results
+
 
 def main_extract_layer_embeddings(
     algorithm="jarvis_march",
