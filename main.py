@@ -370,7 +370,7 @@ def main_extract_layer_embeddings(
     verbose_logging=False,
     log_param_count=True,
     ptr_from_edges=True,
-    disable_edge_updates=False,
+    disable_edge_updates=True,
     num_layers=3,
     hidden_size=0,
     learning_rate=0.00025,
@@ -403,7 +403,7 @@ def main_extract_layer_embeddings(
         "val": {
             "sampler": val_sampler,
             "batch_size": eval_batch_size,
-            "save_emb_sub_dir": "val",
+            "save_emb_sub_dir": "validation",
         },
         "test": {
             "sampler": test_sampler,
@@ -469,3 +469,4 @@ def get_model_embeddings(sampler, model, batch_size, rng_key):
 
 if __name__ == "__main__":
     main_extract_layer_embeddings()
+    main_

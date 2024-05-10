@@ -208,12 +208,9 @@ class RT(Processor):
         node_tensors = node_enc(node_tensors)
         edge_tensors = edge_enc(edge_tensors)
         if (
-                not (
-                    type(adj_mat)
-                    == jax._src.interpreters.partial_eval.DynamicJaxprTracer
-                )
-                and self.save_embeddings
-            ):
+            not (type(adj_mat) == jax._src.interpreters.partial_eval.DynamicJaxprTracer)
+            and self.save_embeddings
+        ):
             result = pure_callback(
                 save_input,
                 jax.ShapeDtypeStruct(shape=(), dtype=np.int32),
@@ -270,7 +267,6 @@ class RT(Processor):
                         (i + 13, np.array(deepcopy(edge_tensors))),
                     ],
                 )
-            jnp.array_equal(edge_tensors_dc, edge_tensors)
             pass
 
         if self.graph_vec == "core":
