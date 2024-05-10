@@ -900,7 +900,10 @@ def get_processor_factory(
                 out_size=192,
                 mid_size=192,
                 activation=None,
-                reduction=jnp.max,
+                reduction=kwargs["reduction"],
+                add_virtual_node=kwargs["add_virtual_node"],
+                apply_attention=kwargs["add_virtual_node"],
+                number_of_attention_heads=kwargs["number_of_attention_heads"],
             )
         else:
             raise ValueError("Unexpected processor kind " + kind)

@@ -469,4 +469,3 @@ def get_model_embeddings(sampler, model, batch_size, rng_key):
 
 if __name__ == "__main__":
     main_extract_layer_embeddings()
-    main_
