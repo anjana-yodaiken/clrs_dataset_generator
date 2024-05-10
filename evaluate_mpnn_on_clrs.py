@@ -11,7 +11,7 @@ if __name__ == "__main__":
     layer_norms = [True, False]
     mid_dims = [192, 256]
     reductions = ["max", "sum"]
-    disable_edge_updates_ = [True, False]
+    disable_edge_updates_ = [False, True]
     apply_attentions = [False]
     number_of_attention_heads_ = [3]
 
@@ -25,7 +25,7 @@ if __name__ == "__main__":
         number_of_attention_heads_,
     )
 
-    with open("results.csv", "w", newline="") as csvfile:
+    with open("results.csv", "a", newline="") as csvfile:
         field_names = [
             "add_virtual_node",
             "layer_norm",
@@ -84,7 +84,8 @@ if __name__ == "__main__":
             row["train"] = "None"
             row["val"] = "None"
             row["test"] = "None"
-            with open("results.csv", "w", newline="") as csvfile:
+            with open("results.csv", "a", newline="") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=field_names)
                 writer.writerow(row)
             continue
 
@@ -103,9 +104,10 @@ if __name__ == "__main__":
             eval_batch_size=1,
         )
 
-        row["train"] = results["train"]
-        row["val"] = results["val"]
-        row["test"] = results["test"]
+        row["train"] = results["train"]["score"]
+        row["val"] = results["val"]["score"]
+        row["test"] = results["test"]["score"]
 
-        with open("results.csv", "w", newline="") as csvfile:
+        with open("results.csv", "a", newline="") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=field_names)
             writer.writerow(row)
