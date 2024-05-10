@@ -403,7 +403,7 @@ def main_extract_layer_embeddings(
         "val": {
             "sampler": val_sampler,
             "batch_size": eval_batch_size,
-            "save_emb_sub_dir": "val",
+            "save_emb_sub_dir": "validation",
         },
         "test": {
             "sampler": test_sampler,
@@ -469,3 +469,4 @@ def get_model_embeddings(sampler, model, batch_size, rng_key):
 
 if __name__ == "__main__":
     main_extract_layer_embeddings()
+    main_
