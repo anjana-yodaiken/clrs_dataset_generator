@@ -35,6 +35,13 @@ def restore_model(
     eval_batch_size,
     encoder_decoder_path,
     model_path,
+    add_virtual_node,
+    layer_norm,
+    mid_dim,
+    reduction,
+    apply_attention,
+    number_of_attention_heads,
+    only_load_processor,
 ):
     processor_factory = clrs.get_processor_factory(
         processor_type,
@@ -48,6 +55,12 @@ def restore_model(
         disable_edge_updates=disable_edge_updates,
         save_emb_sub_dir=save_emb_sub_dir,
         save_embeddings=save_embeddings,
+        add_virtual_node=add_virtual_node,
+        layer_norm=layer_norm,
+        mid_dim=mid_dim,
+        reduction=reduction,
+        apply_attention=apply_attention,
+        number_of_attention_heads=number_of_attention_heads,
     )
 
     if hint_mode == "encoded_decoded_nodiff":
@@ -100,7 +113,7 @@ def restore_model(
     )
     rt_model.restore_model(
         str(model_path),
-        only_load_processor=False,
+        only_load_processor=only_load_processor,
         encoder_decoder_path=encoder_decoder_path,
     )
     test_sampler.reset_proc_samples()

@@ -17,8 +17,8 @@ from utils import _iterate_sampler, restore_model, get_dataset_samplers, unpack
 @click.option("--chunk_length", default=100)
 @click.option("--train_items", default=320000)
 @click.option("--train_size", default=10000)
-@click.option("--valid_size", default=32)
 @click.option("--test_size", default=32)
+@click.option("--valid_size", default=32)
 @click.option("--eval_every", default=50)
 @click.option("--eval_on_train_set", default=True)
 @click.option("--eval_on_test_set", default=True)
@@ -39,12 +39,19 @@ from utils import _iterate_sampler, restore_model, get_dataset_samplers, unpack
 @click.option("--hint_mode", default="encoded_decoded_nodiff")
 @click.option("--use_ln", default=True)
 @click.option("--use_lstm", default=False)
-@click.option("--graph_vec", default="cat")
+@click.option("--graph_vec", default="att")
 @click.option("--processor_type", default="rt")
 @click.option("--checkpoint_path", default="/tmp/CLRS30")
 @click.option("--freeze_processor", default=False)
 @click.option("--function", default="extract")
 @click.option("--model_path", default=None)
+@click.option("--add_virtual_node", default=False)
+@click.option("--layer_norm", default=False)
+@click.option("--mid_dim", default=192)
+@click.option("--reduction", default="max")
+@click.option("--apply_attention", default=False)
+@click.option("--number_of_attention_heads", default=3)
+@click.option("--only_load_process", default=True)
 def click_main(
     algorithm,
     train_seed,
@@ -85,7 +92,24 @@ def click_main(
     freeze_processor,
     function,
     model_path,
+    add_virtual_node,
+    layer_norm,
+    mid_dim,
+    reduction,
+    apply_attention,
+    number_of_attention_heads,
+    only_load_processor,
 ):
+
+    if reduction == "max":
+        reduction = jnp.max
+    elif reduction == "sum":
+        reduction = jnp.sum
+    elif reduction == "mean":
+        reduction = jnp.mean
+    else:
+        raise Exception("Unknown reduction.")
+
     if function == "extract":
         main_extract_layer_embeddings(
             algorithm,
@@ -129,44 +153,51 @@ def click_main(
 
     if function == "validate":
         main_validate_model(
-            algorithm,
-            train_seed,
-            valid_seed,
-            test_seed,
-            model_seed,
-            batch_size,
-            eval_batch_size,
-            chunked_training,
-            chunk_length,
-            train_items,
-            train_size,
-            test_size,
-            valid_size,
-            eval_every,
-            eval_on_train_set,
-            eval_on_test_set,
-            verbose_logging,
-            log_param_count,
-            ptr_from_edges,
-            disable_edge_updates,
-            num_layers,
-            hidden_size,
-            learning_rate,
-            dropout_prob,
-            hint_teacher_forcing_noise,
-            nb_heads,
-            head_size,
-            node_hid_size,
-            edge_hid_size_1,
-            edge_hid_size_2,
-            hint_mode,
-            use_ln,
-            use_lstm,
-            graph_vec,
-            processor_type,
-            checkpoint_path,
-            freeze_processor,
-            model_path,
+            algorithm=algorithm,
+            train_seed=train_seed,
+            valid_seed=valid_seed,
+            test_seed=test_seed,
+            model_seed=model_seed,
+            batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
+            chunked_training=chunked_training,
+            chunk_length=chunk_length,
+            train_items=train_items,
+            train_size=train_size,
+            test_size=test_size,
+            valid_size=valid_size,
+            eval_every=eval_every,
+            eval_on_train_set=eval_on_train_set,
+            eval_on_test_set=eval_on_test_set,
+            verbose_logging=verbose_logging,
+            log_param_count=log_param_count,
+            ptr_from_edges=ptr_from_edges,
+            disable_edge_updates=disable_edge_updates,
+            num_layers=num_layers,
+            hidden_size=hidden_size,
+            learning_rate=learning_rate,
+            dropout_prob=dropout_prob,
+            hint_teacher_forcing_noise=hint_teacher_forcing_noise,
+            nb_heads=nb_heads,
+            head_size=head_size,
+            node_hid_size=node_hid_size,
+            edge_hid_size_1=edge_hid_size_1,
+            edge_hid_size_2=edge_hid_size_2,
+            hint_mode=hint_mode,
+            use_ln=use_ln,
+            use_lstm=use_lstm,
+            graph_vec=graph_vec,
+            processor_type=processor_type,
+            checkpoint_path=checkpoint_path,
+            freeze_processor=freeze_processor,
+            model_path=model_path,
+            add_virtual_node=add_virtual_node,
+            layer_norm=layer_norm,
+            mid_dim=mid_dim,
+            reduction=reduction,
+            apply_attention=apply_attention,
+            number_of_attention_heads=number_of_attention_heads,
+            only_load_processor=only_load_processor,
         )
 
 
@@ -272,7 +303,15 @@ def main_validate_model(
     freeze_processor=False,
     encoder_decoder_path=None,
     model_path=None,
+    add_virtual_node=False,
+    layer_norm=False,
+    mid_dim=192,
+    reduction=jnp.max,
+    apply_attention=False,
+    number_of_attention_heads=3,
+    only_load_processor=True,
 ):
+
     train_sampler, train_spec, val_sampler, test_sampler = get_dataset_samplers(
         algorithm, train_seed, valid_seed, test_seed, train_size, test_size, valid_size
     )
@@ -333,6 +372,13 @@ def main_validate_model(
             eval_batch_size,
             encoder_decoder_path=encoder_decoder_path,
             model_path=model_path,
+            add_virtual_node=add_virtual_node,
+            layer_norm=layer_norm,
+            mid_dim=mid_dim,
+            reduction=reduction,
+            apply_attention=apply_attention,
+            number_of_attention_heads=number_of_attention_heads,
+            only_load_processor=only_load_processor,
         )
 
         stats = collect_and_eval(
@@ -389,6 +435,12 @@ def main_extract_layer_embeddings(
     checkpoint_path="tmp/CLRS30",
     freeze_processor=False,
     model_path="trained_models/rt_jarvis_march.pkl",
+    add_virtual_node=False,
+    layer_norm=False,
+    mid_dim=192,
+    reduction=jnp.max,
+    apply_attention=False,
+    number_of_attention_heads=3,
 ):
     train_sampler, train_spec, val_sampler, test_sampler = get_dataset_samplers(
         algorithm, train_seed, valid_seed, test_seed, train_size, test_size, valid_size
@@ -446,6 +498,12 @@ def main_extract_layer_embeddings(
             eval_batch_size,
             encoder_decoder_path=None,
             model_path=model_path,
+            reduction=reduction,
+            layer_norm=layer_norm,
+            mid_dim=mid_dim,
+            add_virtual_node=add_virtual_node,
+            apply_attention=apply_attention,
+            number_of_attention_heads=number_of_attention_heads,
         )
 
         new_rng_key = get_model_embeddings(sampler, rt_model, batch_size, rng_key)
@@ -468,4 +526,4 @@ def get_model_embeddings(sampler, model, batch_size, rng_key):
 
 
 if __name__ == "__main__":
-    main_extract_layer_embeddings()
+    click_main()

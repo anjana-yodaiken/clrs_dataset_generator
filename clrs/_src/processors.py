@@ -898,12 +898,14 @@ def get_processor_factory(
             processor = AlignedMPNN(
                 nb_layers=3,
                 out_size=192,
-                mid_size=192,
+                mid_size=kwargs["mid_dim"],
                 activation=None,
-                reduction=kwargs["reduction"],
                 add_virtual_node=kwargs["add_virtual_node"],
-                apply_attention=kwargs["add_virtual_node"],
+                use_ln=kwargs["layer_norm"],
+                reduction=kwargs["reduction"],
+                apply_attention=kwargs["apply_attention"],
                 number_of_attention_heads=kwargs["number_of_attention_heads"],
+                disable_edge_updates=kwargs["disable_edge_updates"],
             )
         else:
             raise ValueError("Unexpected processor kind " + kind)
