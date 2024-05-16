@@ -900,6 +900,7 @@ def get_processor_factory(
                 out_size=192,
                 mid_size=kwargs["mid_dim"],
                 activation=None,
+                mid_act=jax.nn.relu,
                 add_virtual_node=kwargs["add_virtual_node"],
                 use_ln=kwargs["layer_norm"],
                 reduction=kwargs["reduction"],
